@@ -15,9 +15,11 @@
  ********************************************************************************/
 
 import * as bent from 'bent';
+import * as semver from 'semver';
 import { injectable, inject } from 'inversify';
-import { VSXExtensionRaw, VSXSearchParam, VSXSearchResult } from './vsx-registry-types';
+import { VSXExtensionRaw, VSXSearchParam, VSXSearchResult, VSXAllVersions } from './vsx-registry-types';
 import { VSXEnvironment } from './vsx-environment';
+import { VSXApiVersionProvider } from './vsx-api-version-provider';
 
 const fetchText = bent('GET', 'string', 200);
 const fetchJson = bent('GET', {
@@ -41,6 +43,9 @@ export namespace VSXResponseError {
 
 @injectable()
 export class VSXRegistryAPI {
+
+    @inject(VSXApiVersionProvider)
+    protected readonly apiVersionProvider: VSXApiVersionProvider;
 
     @inject(VSXEnvironment)
     protected readonly environment: VSXEnvironment;
@@ -83,12 +88,13 @@ export class VSXRegistryAPI {
         return searchUri;
     }
 
-    async getExtension(id: string): Promise<VSXExtensionRaw> {
+    async getExtension(id: string, param?: QueryParam): Promise<VSXExtensionRaw> {
         const apiUri = await this.environment.getRegistryApiUri();
-        const param: QueryParam = {
-            extensionId: id
+        const queryParm = param ? param : <QueryParam>{
+            extensionId: id,
+            includeAllVersions: true,
         };
-        const result = await this.postJson<QueryParam, QueryResult>(apiUri.resolve('-/query').toString(), param);
+        const result = await this.postJson<QueryParam, QueryResult>(apiUri.resolve('-/query').toString(), queryParm);
         if (result.extensions && result.extensions.length > 0) {
             return result.extensions[0];
         }
@@ -105,6 +111,55 @@ export class VSXRegistryAPI {
 
     fetchText(url: string): Promise<string> {
         return fetchText(url);
+    }
+
+    /**
+     * Get the latest compatible extension version.
+     * - an extension satisfies compatibility if its `engines.vscode` version is supported.
+     * @param id the extension id.
+     *
+     * @returns the data for the latest compatible extension version if available, else `undefined`.
+     */
+    async getLatestCompatibleExtensionVersion(id: string): Promise<VSXExtensionRaw | undefined> {
+        const extension = await this.getExtension(id);
+        const apiUri = await this.environment.getRegistryApiUri();
+        for (const extensionVersion in extension.allVersions) {
+            if (extensionVersion === 'latest') {
+                continue;
+            }
+            const data: VSXExtensionRaw = await this.fetchJson(apiUri.resolve(id.replace('.', '/')).toString() + `/${extensionVersion}`);
+            if (data.engines && this.isEngineValid(data.engines.vscode)) {
+                return data;
+            }
+        }
+    }
+
+    /**
+     * Get the latest compatible version of an extension.
+     * @param versions the `allVersions` property.
+     *
+     * @returns the latest compatible version of an extension if it exists, else `undefined`.
+     */
+    getLatestCompatibleVersion(versions: VSXAllVersions[]): VSXAllVersions | undefined {
+        for (const version of versions) {
+            if (this.isEngineValid(version.engines?.vscode)) {
+                return version;
+            }
+        }
+    }
+
+    /**
+     * Determine if the engine is valid.
+     * @param engine the engine.
+     *
+     * @returns `true` if the engine satisfies the API version.
+     */
+    protected isEngineValid(engine?: string): boolean {
+        if (!engine) {
+            return false;
+        }
+        const apiVersion = this.apiVersionProvider.getApiVersion();
+        return engine === '*' || semver.satisfies(apiVersion, engine);
     }
 
 }
