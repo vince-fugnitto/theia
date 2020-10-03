@@ -132,14 +132,8 @@ export class JsonRpcProxyFactory<T extends object> implements ProxyHandler<T> {
      * response.
      */
     listen(connection: MessageConnection): void {
-        if (this.target) {
-            for (const prop in this.target) {
-                if (typeof this.target[prop] === 'function') {
-                    connection.onRequest(prop, (...args) => this.onRequest(prop, ...args));
-                    connection.onNotification(prop, (...args) => this.onNotification(prop, ...args));
-                }
-            }
-        }
+        connection.onRequest((prop, ...args) => this.onRequest(prop, ...args));
+        connection.onNotification((prop, ...args) => this.onNotification(prop, ...args));
         connection.onDispose(() => this.waitForConnection());
         connection.listen();
         this.connectionPromiseResolve(connection);
