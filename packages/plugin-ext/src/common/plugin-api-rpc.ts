@@ -67,7 +67,9 @@ import {
     SearchInWorkspaceResult,
     AuthenticationSession,
     AuthenticationSessionsChangeEvent,
-    AuthenticationProviderInformation
+    AuthenticationProviderInformation,
+    Comment,
+    CommentReaction, CommentOptions, CommentThreadCollapsibleState, CommentThread, CommentThreadChangedEvent,
 } from './plugin-api-rpc-model';
 import { ExtPluginApi } from './plugin-ext-api-contribution';
 import { KeysToAnyValues, KeysToKeysToAnyValue } from './types';
@@ -1452,6 +1454,38 @@ export interface ClipboardMain {
     $writeText(value: string): Promise<void>;
 }
 
+export interface CommentsExt {
+    $createCommentThreadTemplate(commentControllerHandle: number, uriComponents: UriComponents, range: Range): void;
+    $updateCommentThreadTemplate(commentControllerHandle: number, threadHandle: number, range: Range): Promise<void>;
+    $deleteCommentThread(commentControllerHandle: number, commentThreadHandle: number): Promise<void>;
+    $provideCommentingRanges(commentControllerHandle: number, uriComponents: UriComponents, token: CancellationToken): Promise<Range[] | undefined>;
+    $toggleReaction(commentControllerHandle: number, threadHandle: number, uri: UriComponents, comment: Comment, reaction: CommentReaction): Promise<void>;
+}
+
+export interface CommentProviderFeatures {
+    reactionGroup?: CommentReaction[];
+    reactionHandler?: boolean;
+    options?: CommentOptions;
+}
+
+export type CommentThreadChanges = Partial<{
+    range: Range,
+    label: string,
+    contextValue: string,
+    comments: Comment[],
+    collapseState: CommentThreadCollapsibleState;
+}>;
+
+export interface CommentsMain {
+    $registerCommentController(handle: number, id: string, label: string): void;
+    $unregisterCommentController(handle: number): void;
+    $updateCommentControllerFeatures(handle: number, features: CommentProviderFeatures): void;
+    $createCommentThread(handle: number, commentThreadHandle: number, threadId: string, resource: UriComponents, range: Range, extensionId: string): CommentThread | undefined;
+    $updateCommentThread(handle: number, commentThreadHandle: number, threadId: string, resource: UriComponents, changes: CommentThreadChanges): void;
+    $deleteCommentThread(handle: number, commentThreadHandle: number): void;
+    $onDidCommentThreadsChange(handle: number, event: CommentThreadChangedEvent): void;
+}
+
 export const PLUGIN_RPC_CONTEXT = {
     AUTHENTICATION_MAIN: <ProxyIdentifier<AuthenticationMain>>createProxyIdentifier<AuthenticationMain>('AuthenticationMain'),
     COMMAND_REGISTRY_MAIN: <ProxyIdentifier<CommandRegistryMain>>createProxyIdentifier<CommandRegistryMain>('CommandRegistryMain'),
@@ -1480,7 +1514,8 @@ export const PLUGIN_RPC_CONTEXT = {
     WINDOW_MAIN: createProxyIdentifier<WindowMain>('WindowMain'),
     CLIPBOARD_MAIN: <ProxyIdentifier<ClipboardMain>>createProxyIdentifier<ClipboardMain>('ClipboardMain'),
     LABEL_SERVICE_MAIN: <ProxyIdentifier<LabelServiceMain>>createProxyIdentifier<LabelServiceMain>('LabelServiceMain'),
-    TIMELINE_MAIN: <ProxyIdentifier<TimelineMain>>createProxyIdentifier<TimelineMain>('TimelineMain')
+    TIMELINE_MAIN: <ProxyIdentifier<TimelineMain>>createProxyIdentifier<TimelineMain>('TimelineMain'),
+    COMMENTS_MAIN: <ProxyIdentifier<CommentsMain>>createProxyIdentifier<CommentsMain>('CommentsMain')
 };
 
 export const MAIN_RPC_CONTEXT = {
@@ -1509,7 +1544,8 @@ export const MAIN_RPC_CONTEXT = {
     SCM_EXT: createProxyIdentifier<ScmExt>('ScmExt'),
     DECORATIONS_EXT: createProxyIdentifier<DecorationsExt>('DecorationsExt'),
     LABEL_SERVICE_EXT: createProxyIdentifier<LabelServiceExt>('LabelServiceExt'),
-    TIMELINE_EXT: createProxyIdentifier<TimelineExt>('TimeLineExt')
+    TIMELINE_EXT: createProxyIdentifier<TimelineExt>('TimeLineExt'),
+    COMMENTS_EXT: createProxyIdentifier<CommentsExt>('CommentsExt')
 };
 
 export interface TasksExt {

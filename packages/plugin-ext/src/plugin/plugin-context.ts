@@ -156,6 +156,7 @@ import { WebviewsExtImpl } from './webviews';
 import { ExtHostFileSystemEventService } from './file-system-event-service-ext-impl';
 import { LabelServiceExtImpl } from '../plugin/label-service';
 import { TimelineExtImpl } from './timeline';
+import { CommentsExtImpl } from './comments';
 
 export function createAPIFactory(
     rpc: RPCProtocol,
@@ -191,6 +192,7 @@ export function createAPIFactory(
     const decorationsExt = rpc.set(MAIN_RPC_CONTEXT.DECORATIONS_EXT, new DecorationsExtImpl(rpc));
     const labelServiceExt = rpc.set(MAIN_RPC_CONTEXT.LABEL_SERVICE_EXT, new LabelServiceExtImpl(rpc));
     const timelineExt = rpc.set(MAIN_RPC_CONTEXT.TIMELINE_EXT, new TimelineExtImpl(rpc, commandRegistry));
+    const commentsExt = rpc.set(MAIN_RPC_CONTEXT.COMMENTS_EXT, new CommentsExtImpl(rpc, commandRegistry, documents));
     rpc.set(MAIN_RPC_CONTEXT.DEBUG_EXT, debugExt);
 
     return function (plugin: InternalPlugin): typeof theia {
@@ -786,24 +788,9 @@ export function createAPIFactory(
             }
         };
 
-        const comment: typeof theia.comment = {
+        const comments: typeof theia.comments = {
             createCommentController(id: string, label: string): theia.CommentController {
-                return {
-                    id, label, inputBox: undefined,
-                    createCommentThread(commentId: string, resource: Uri, range: Range, comments: theia.Comment[]): theia.CommentThread {
-                        return {
-                            id: commentId,
-                            resource,
-                            range,
-                            comments,
-                            collapsibleState: 0,
-                            dispose(): void {
-                            }
-                        };
-                    },
-                    dispose(): void {
-                    }
-                };
+                return commentsExt.createCommentController(plugin, id, label);
             }
         };
 
@@ -811,7 +798,7 @@ export function createAPIFactory(
             version: require('../../package.json').version,
             authentication,
             commands,
-            comment,
+            comments,
             window,
             workspace,
             env,

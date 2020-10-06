@@ -1,0 +1,49 @@
+.comment-range-glyph {
+    margin-left: 5px;
+    cursor: pointer;
+}
+.comment-range-glyph:before {
+    position: absolute;
+    content: '';
+    height: 100%;
+    width: 0;
+    left: -2px;
+    transition: width 80ms linear, left 80ms linear;
+}
+
+.margin-view-overlays > div:hover > .comment-range-glyph:before {
+    position: absolute;
+    content: '+';
+    height: 100%;
+    width: 9px;
+    left: -6px;
+}
+
+.monaco-editor .comment-diff-added {
+    border-left: 3px solid var(--theia-editorGutter-commentRangeForeground);
+    transition: opacity 0.5s;
+}
+.monaco-editor .comment-diff-added:before {
+    background: var(--theia-editorGutter-commentRangeForeground);
+    color: #000;
+}
+.monaco-editor .margin:hover .comment-diff-added {
+    opacity: 1;
+}
+
+.monaco-editor .review-widget .body {
+    overflow: hidden;
+}
+
+.monaco-editor .review-widget .head {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+}
+
+.monaco-editor .review-widget .head .review-title {
+    display: inline-block;
+    font-size: 13px;
+    margin-left: 20px;
+    cursor: default;
+}
