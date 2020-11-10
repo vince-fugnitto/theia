@@ -23,22 +23,22 @@ export class ReviewZoneWidget extends MonacoEditorZoneWidget {
     protected _headingLabel: HTMLElement;
 
     public getGlyphPosition(): number {
-		// if (this._commentGlyph) {
-		// 	return this._commentGlyph.getPosition().position!.lineNumber;
-		// }
-		return 0;
-	}
+        // if (this._commentGlyph) {
+        // return this._commentGlyph.getPosition().position!.lineNumber;
+        // }
+        return 0;
+    }
 
     constructor(
-		editor: monaco.editor.IStandaloneCodeEditor,
+        editor: monaco.editor.IStandaloneCodeEditor,
         private _owner: string,
         private _commentThread: CommentThread
-	) {
-		super(editor);
-		this._headElement = document.createElement('div');
-		this._bodyElement = document.createElement('div');
+    ) {
+        super(editor);
+        this._headElement = document.createElement('div');
+        this._bodyElement = document.createElement('div');
         this._fillContainer(this.containerNode);
-	}
+    }
 
     public get owner(): string {
         return this._owner;

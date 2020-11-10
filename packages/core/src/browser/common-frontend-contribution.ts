@@ -52,6 +52,7 @@ import { EncodingRegistry } from './encoding-registry';
 import { UTF8 } from '../common/encodings';
 import { EnvVariablesServer } from '../common/env-variables';
 import { AuthenticationService } from './authentication-service';
+import { FormatType } from './saveable';
 
 export namespace CommonMenus {
 
@@ -564,9 +565,9 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
     }
 
     registerCommands(commandRegistry: CommandRegistry): void {
-        commandRegistry.registerCommand(CommonCommands.OPEN, new UriAwareCommandHandler<URI[]>(this.selectionService, {
+        commandRegistry.registerCommand(CommonCommands.OPEN, UriAwareCommandHandler.MultiSelect(this.selectionService, {
             execute: uris => uris.map(uri => open(this.openerService, uri)),
-        }, { multi: true }));
+        }));
         commandRegistry.registerCommand(CommonCommands.CUT, {
             execute: () => {
                 if (supportCut) {
@@ -594,7 +595,7 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
                 }
             }
         });
-        commandRegistry.registerCommand(CommonCommands.COPY_PATH, new UriAwareCommandHandler<URI[]>(this.selectionService, {
+        commandRegistry.registerCommand(CommonCommands.COPY_PATH, UriAwareCommandHandler.MultiSelect(this.selectionService, {
             execute: async uris => {
                 if (uris.length) {
                     const lineDelimiter = isWindows ? '\r\n' : '\n';
@@ -604,7 +605,7 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
                     await this.messageService.info('Open a file first to copy its path');
                 }
             }
-        }, { multi: true }));
+        }));
 
         commandRegistry.registerCommand(CommonCommands.UNDO, {
             execute: () => document.execCommand('undo')
@@ -754,13 +755,13 @@ export class CommonFrontendContribution implements FrontendApplicationContributi
         });
 
         commandRegistry.registerCommand(CommonCommands.SAVE, {
-            execute: () => this.shell.save()
+            execute: () => this.shell.save({ formatType: FormatType.ON })
         });
         commandRegistry.registerCommand(CommonCommands.SAVE_WITHOUT_FORMATTING, {
-            execute: () => this.shell.save({ skipFormatting: true })
+            execute: () => this.shell.save({ formatType: FormatType.OFF })
         });
         commandRegistry.registerCommand(CommonCommands.SAVE_ALL, {
-            execute: () => this.shell.saveAll()
+            execute: () => this.shell.saveAll({ formatType: FormatType.DIRTY })
         });
         commandRegistry.registerCommand(CommonCommands.ABOUT_COMMAND, {
             execute: () => this.openAbout()

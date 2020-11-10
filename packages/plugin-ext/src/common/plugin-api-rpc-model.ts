@@ -16,6 +16,7 @@
 
 import * as theia from '@theia/plugin';
 import { UriComponents } from './uri-components';
+import { CompletionItemTag } from '../plugin/types-impl';
 import { Event as TheiaEvent } from '@theia/core/lib/common/event';
 import { URI } from 'vscode-uri';
 
@@ -116,6 +117,9 @@ export interface Completion {
     commitCharacters?: string[];
     additionalTextEdits?: SingleEditOperation[];
     command?: Command;
+    tags?: CompletionItemTag[];
+    /** @deprecated use tags instead. */
+    deprecated?: boolean;
 }
 
 export interface SingleEditOperation {

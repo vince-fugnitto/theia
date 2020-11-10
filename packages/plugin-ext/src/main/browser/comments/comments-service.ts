@@ -29,201 +29,222 @@ import { CommentController } from './comments-main';
 import { CancellationToken } from '@theia/core/lib/common/cancellation';
 
 export interface ResourceCommentThreadEvent {
-	resource: URI;
-	commentInfos: ICommentInfo[];
+    resource: URI;
+    commentInfos: ICommentInfo[];
 }
 
 export interface ICommentInfo extends CommentInfo {
-	owner: string;
-	label?: string;
+    owner: string;
+    label?: string;
 }
 
 export interface IWorkspaceCommentThreadsEvent {
-	ownerId: string;
-	commentThreads: CommentThread[];
+    ownerId: string;
+    commentThreads: CommentThread[];
 }
+
 export const CommentsService = Symbol('CommentsService');
+
 export interface CommentsService {
-	readonly _serviceBrand: undefined;
-	readonly onDidSetResourceCommentInfos: Event<ResourceCommentThreadEvent>;
-	readonly onDidSetAllCommentThreads: Event<IWorkspaceCommentThreadsEvent>;
-	readonly onDidUpdateCommentThreads: Event<ICommentThreadChangedEvent>;
-	readonly onDidChangeActiveCommentThread: Event<CommentThread | null>;
-	readonly onDidChangeActiveCommentingRange: Event<{ range: Range, commentingRangesInfo: CommentingRanges }>;
-	readonly onDidSetDataProvider: Event<void>;
-	readonly onDidDeleteDataProvider: Event<string>;
-	setDocumentComments(resource: URI, commentInfos: ICommentInfo[]): void;
-	setWorkspaceComments(owner: string, commentsByResource: CommentThread[]): void;
-	removeWorkspaceComments(owner: string): void;
-	registerCommentController(owner: string, commentControl: CommentController): void;
-	unregisterCommentController(owner: string): void;
-	getCommentController(owner: string): CommentController | undefined;
-	createCommentThreadTemplate(owner: string, resource: URI, range: Range): void;
-	updateCommentThreadTemplate(owner: string, threadHandle: number, range: Range): Promise<void>;
-	// getCommentMenus(owner: string): CommentMenus;
-	updateComments(ownerId: string, event: CommentThreadChangedEvent): void;
-	disposeCommentThread(ownerId: string, threadId: string): void;
-	getComments(resource: URI): Promise<(ICommentInfo | null)[]>;
-	getCommentingRanges(resource: URI): Promise<Range[]>;
-	hasReactionHandler(owner: string): boolean;
-	toggleReaction(owner: string, resource: URI, thread: CommentThread, comment: Comment, reaction: CommentReaction): Promise<void>;
-	setActiveCommentThread(commentThread: CommentThread | null): void;
+    readonly _serviceBrand: undefined;
+    readonly onDidSetResourceCommentInfos: Event<ResourceCommentThreadEvent>;
+    readonly onDidSetAllCommentThreads: Event<IWorkspaceCommentThreadsEvent>;
+    readonly onDidUpdateCommentThreads: Event<ICommentThreadChangedEvent>;
+    readonly onDidChangeActiveCommentThread: Event<CommentThread | null>;
+    readonly onDidChangeActiveCommentingRange: Event<{ range: Range, commentingRangesInfo: CommentingRanges }>;
+    readonly onDidSetDataProvider: Event<void>;
+    readonly onDidDeleteDataProvider: Event<string>;
+
+    setDocumentComments(resource: URI, commentInfos: ICommentInfo[]): void;
+
+    setWorkspaceComments(owner: string, commentsByResource: CommentThread[]): void;
+
+    removeWorkspaceComments(owner: string): void;
+
+    registerCommentController(owner: string, commentControl: CommentController): void;
+
+    unregisterCommentController(owner: string): void;
+
+    getCommentController(owner: string): CommentController | undefined;
+
+    createCommentThreadTemplate(owner: string, resource: URI, range: Range): void;
+
+    updateCommentThreadTemplate(owner: string, threadHandle: number, range: Range): Promise<void>;
+
+    // getCommentMenus(owner: string): CommentMenus;
+    updateComments(ownerId: string, event: CommentThreadChangedEvent): void;
+
+    disposeCommentThread(ownerId: string, threadId: string): void;
+
+    getComments(resource: URI): Promise<(ICommentInfo | null)[]>;
+
+    getCommentingRanges(resource: URI): Promise<Range[]>;
+
+    hasReactionHandler(owner: string): boolean;
+
+    toggleReaction(owner: string, resource: URI, thread: CommentThread, comment: Comment, reaction: CommentReaction): Promise<void>;
+
+    setActiveCommentThread(commentThread: CommentThread | null): void;
 }
 
 @injectable()
 export class PluginCommentService implements CommentsService {
-	declare readonly _serviceBrand: undefined;
+    declare readonly _serviceBrand: undefined;
 
-	private readonly _onDidSetDataProvider: Emitter<void> = new Emitter<void>();
-	readonly onDidSetDataProvider: Event<void> = this._onDidSetDataProvider.event;
+    private readonly _onDidSetDataProvider: Emitter<void> = new Emitter<void>();
+    readonly onDidSetDataProvider: Event<void> = this._onDidSetDataProvider.event;
 
-	private readonly _onDidDeleteDataProvider: Emitter<string> = new Emitter<string>();
-	readonly onDidDeleteDataProvider: Event<string> = this._onDidDeleteDataProvider.event;
+    private readonly _onDidDeleteDataProvider: Emitter<string> = new Emitter<string>();
+    readonly onDidDeleteDataProvider: Event<string> = this._onDidDeleteDataProvider.event;
 
-	private readonly _onDidSetResourceCommentInfos: Emitter<ResourceCommentThreadEvent> = new Emitter<ResourceCommentThreadEvent>();
-	readonly onDidSetResourceCommentInfos: Event<ResourceCommentThreadEvent> = this._onDidSetResourceCommentInfos.event;
+    private readonly _onDidSetResourceCommentInfos: Emitter<ResourceCommentThreadEvent> = new Emitter<ResourceCommentThreadEvent>();
+    readonly onDidSetResourceCommentInfos: Event<ResourceCommentThreadEvent> = this._onDidSetResourceCommentInfos.event;
 
-	private readonly _onDidSetAllCommentThreads: Emitter<IWorkspaceCommentThreadsEvent> = new Emitter<IWorkspaceCommentThreadsEvent>();
-	readonly onDidSetAllCommentThreads: Event<IWorkspaceCommentThreadsEvent> = this._onDidSetAllCommentThreads.event;
+    private readonly _onDidSetAllCommentThreads: Emitter<IWorkspaceCommentThreadsEvent> = new Emitter<IWorkspaceCommentThreadsEvent>();
+    readonly onDidSetAllCommentThreads: Event<IWorkspaceCommentThreadsEvent> = this._onDidSetAllCommentThreads.event;
 
-	private readonly _onDidUpdateCommentThreads: Emitter<ICommentThreadChangedEvent> = new Emitter<ICommentThreadChangedEvent>();
-	readonly onDidUpdateCommentThreads: Event<ICommentThreadChangedEvent> = this._onDidUpdateCommentThreads.event;
+    private readonly _onDidUpdateCommentThreads: Emitter<ICommentThreadChangedEvent> = new Emitter<ICommentThreadChangedEvent>();
+    readonly onDidUpdateCommentThreads: Event<ICommentThreadChangedEvent> = this._onDidUpdateCommentThreads.event;
 
-	private readonly _onDidChangeActiveCommentThread = new Emitter<CommentThread | null>();
-	readonly onDidChangeActiveCommentThread = this._onDidChangeActiveCommentThread.event;
+    private readonly _onDidChangeActiveCommentThread = new Emitter<CommentThread | null>();
+    readonly onDidChangeActiveCommentThread = this._onDidChangeActiveCommentThread.event;
 
-	private readonly _onDidChangeActiveCommentingRange: Emitter<{
-		range: Range, commentingRangesInfo:
-		CommentingRanges
-	}> = new Emitter<{
-		range: Range, commentingRangesInfo:
-		CommentingRanges
-	}>();
-	readonly onDidChangeActiveCommentingRange: Event<{ range: Range, commentingRangesInfo: CommentingRanges }> = this._onDidChangeActiveCommentingRange.event;
+    private readonly _onDidChangeActiveCommentingRange: Emitter<{
+        range: Range, commentingRangesInfo:
+            CommentingRanges
+    }> = new Emitter<{
+        range: Range, commentingRangesInfo:
+            CommentingRanges
+    }>();
+    readonly onDidChangeActiveCommentingRange: Event<{ range: Range, commentingRangesInfo: CommentingRanges }> = this._onDidChangeActiveCommentingRange.event;
 
-	private _commentControls = new Map<string, CommentController>();
-	// private _commentMenus = new Map<string, CommentMenus>();
+    private _commentControls = new Map<string, CommentController>();
 
-	constructor(
-		// @IInstantiationService protected instantiationService: IInstantiationService
-	) {
-		// super();
-	}
+    // private _commentMenus = new Map<string, CommentMenus>();
 
-	setActiveCommentThread(commentThread: CommentThread | null): void {
-		this._onDidChangeActiveCommentThread.fire(commentThread);
-	}
+    constructor(
+        // @IInstantiationService protected instantiationService: IInstantiationService
+    ) {
+        // super();
+    }
 
-	setDocumentComments(resource: URI, commentInfos: ICommentInfo[]): void {
-		this._onDidSetResourceCommentInfos.fire({ resource, commentInfos });
-	}
+    setActiveCommentThread(commentThread: CommentThread | null): void {
+        this._onDidChangeActiveCommentThread.fire(commentThread);
+    }
 
-	setWorkspaceComments(owner: string, commentsByResource: CommentThread[]): void {
-		this._onDidSetAllCommentThreads.fire({ ownerId: owner, commentThreads: commentsByResource });
-	}
+    setDocumentComments(resource: URI, commentInfos: ICommentInfo[]): void {
+        this._onDidSetResourceCommentInfos.fire({ resource, commentInfos });
+    }
 
-	removeWorkspaceComments(owner: string): void {
-		this._onDidSetAllCommentThreads.fire({ ownerId: owner, commentThreads: [] });
-	}
+    setWorkspaceComments(owner: string, commentsByResource: CommentThread[]): void {
+        this._onDidSetAllCommentThreads.fire({ ownerId: owner, commentThreads: commentsByResource });
+    }
 
-	registerCommentController(owner: string, commentControl: CommentController): void {
-		this._commentControls.set(owner, commentControl);
-		this._onDidSetDataProvider.fire();
-	}
+    removeWorkspaceComments(owner: string): void {
+        this._onDidSetAllCommentThreads.fire({ ownerId: owner, commentThreads: [] });
+    }
 
-	unregisterCommentController(owner: string): void {
-		this._commentControls.delete(owner);
-		this._onDidDeleteDataProvider.fire(owner);
-	}
+    registerCommentController(owner: string, commentControl: CommentController): void {
+        this._commentControls.set(owner, commentControl);
+        this._onDidSetDataProvider.fire();
+    }
 
-	getCommentController(owner: string): CommentController | undefined {
-		return this._commentControls.get(owner);
-	}
+    unregisterCommentController(owner: string): void {
+        this._commentControls.delete(owner);
+        this._onDidDeleteDataProvider.fire(owner);
+    }
 
-	createCommentThreadTemplate(owner: string, resource: URI, range: Range): void {
-		const commentController = this._commentControls.get(owner);
+    getCommentController(owner: string): CommentController | undefined {
+        return this._commentControls.get(owner);
+    }
 
-		if (!commentController) {
-			return;
-		}
+    createCommentThreadTemplate(owner: string, resource: URI, range: Range): void {
+        const commentController = this._commentControls.get(owner);
 
-		commentController.createCommentThreadTemplate(resource, range);
-	}
+        if (!commentController) {
+            return;
+        }
 
-	async updateCommentThreadTemplate(owner: string, threadHandle: number, range: Range): Promise<void> {
-		const commentController = this._commentControls.get(owner);
+        commentController.createCommentThreadTemplate(resource, range);
+    }
 
-		if (!commentController) {
-			return;
-		}
+    async updateCommentThreadTemplate(owner: string, threadHandle: number, range: Range): Promise<void> {
+        const commentController = this._commentControls.get(owner);
 
-		await commentController.updateCommentThreadTemplate(threadHandle, range);
-	}
+        if (!commentController) {
+            return;
+        }
 
-	disposeCommentThread(owner: string, threadId: string): void {
-		const controller = this.getCommentController(owner);
-		if (controller) {
-			controller.deleteCommentThreadMain(threadId);
-		}
-	}
+        await commentController.updateCommentThreadTemplate(threadHandle, range);
+    }
 
-	// getCommentMenus(owner: string): CommentMenus {
-	// 	if (this._commentMenus.get(owner)) {
-	// 		return this._commentMenus.get(owner)!;
-	// 	}
+    disposeCommentThread(owner: string, threadId: string): void {
+        const controller = this.getCommentController(owner);
+        if (controller) {
+            controller.deleteCommentThreadMain(threadId);
+        }
+    }
+
+    // getCommentMenus(owner: string): CommentMenus {
+    //     if (this._commentMenus.get(owner)) {
+    //     return this._commentMenus.get(owner)!;
+    // }
     //
-	// 	let menu = this.instantiationService.createInstance(CommentMenus);
-	// 	this._commentMenus.set(owner, menu);
-	// 	return menu;
-	// }
+    // let menu = this.instantiationService.createInstance(CommentMenus);
+    // this._commentMenus.set(owner, menu);
+    // return menu;
+    // }
 
-	updateComments(ownerId: string, event: CommentThreadChangedEvent): void {
-		const evt: ICommentThreadChangedEvent = Object.assign({}, event, { owner: ownerId });
-		this._onDidUpdateCommentThreads.fire(evt);
-	}
+    updateComments(ownerId: string, event: CommentThreadChangedEvent): void {
+        const evt: ICommentThreadChangedEvent = Object.assign({}, event, { owner: ownerId });
+        this._onDidUpdateCommentThreads.fire(evt);
+    }
 
-	async toggleReaction(owner: string, resource: URI, thread: CommentThread, comment: Comment, reaction: CommentReaction): Promise<void> {
-		const commentController = this._commentControls.get(owner);
+    async toggleReaction(owner: string, resource: URI, thread: CommentThread, comment: Comment, reaction: CommentReaction): Promise<void> {
+        const commentController = this._commentControls.get(owner);
 
-		if (commentController) {
-			return commentController.toggleReaction(resource, thread, comment, reaction, CancellationToken.None);
-		} else {
-			throw new Error('Not supported');
-		}
-	}
+        if (commentController) {
+            return commentController.toggleReaction(resource, thread, comment, reaction, CancellationToken.None);
+        } else {
+            throw new Error('Not supported');
+        }
+    }
 
-	hasReactionHandler(owner: string): boolean {
-		const commentProvider = this._commentControls.get(owner);
+    hasReactionHandler(owner: string): boolean {
+        const commentProvider = this._commentControls.get(owner);
 
-		if (commentProvider) {
-			return !!commentProvider.features.reactionHandler;
-		}
+        if (commentProvider) {
+            return !!commentProvider.features.reactionHandler;
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	async getComments(resource: URI): Promise<(ICommentInfo | null)[]> {
-		const commentControlResult: Promise<ICommentInfo | null>[] = [];
+    async getComments(resource: URI): Promise<(ICommentInfo | null)[]> {
+        const commentControlResult: Promise<ICommentInfo | null>[] = [];
 
-		this._commentControls.forEach(control => {
-			commentControlResult.push(control.getDocumentComments(resource, CancellationToken.None)
-				.catch(e => {
-					console.log(e);
-					return null;
-				}));
-		});
+        this._commentControls.forEach(control => {
+            commentControlResult.push(control.getDocumentComments(resource, CancellationToken.None)
+                .catch(e => {
+                    console.log(e);
+                    return null;
+                }));
+        });
 
-		return Promise.all(commentControlResult);
-	}
+        return Promise.all(commentControlResult);
+    }
 
-	async getCommentingRanges(resource: URI): Promise<Range[]> {
-		const commentControlResult: Promise<Range[]>[] = [];
+    async getCommentingRanges(resource: URI): Promise<Range[]> {
+        const commentControlResult: Promise<Range[]>[] = [];
 
-		this._commentControls.forEach(control => {
-			commentControlResult.push(control.getCommentingRanges(resource, CancellationToken.None));
-		});
+        this._commentControls.forEach(control => {
+            commentControlResult.push(control.getCommentingRanges(resource, CancellationToken.None));
+        });
 
-		const ret = await Promise.all(commentControlResult);
-		return ret.reduce((prev, curr) => { prev.push(...curr); return prev; }, []);
-	}
+        const ret = await Promise.all(commentControlResult);
+        return ret.reduce((prev, curr) => {
+            prev.push(...curr);
+            return prev;
+        }, []);
+    }
 }
