@@ -163,6 +163,7 @@ export class WebviewImpl implements theia.Webview {
         readonly plugin: Plugin
     ) {
         this._options = options;
+        console.log('>>>>>>>>>>>>>>>> WebviewImpl init with WebviewInitData: ' + JSON.stringify(initData));
     }
 
     dispose(): void {
@@ -174,11 +175,13 @@ export class WebviewImpl implements theia.Webview {
     }
 
     asWebviewUri(resource: theia.Uri): theia.Uri {
+        console.log('>>>>>>>>>>>>>>>> asWebviewUri call for resource: ' + JSON.stringify(resource));
         const uri = this.initData.webviewResourceRoot
             // Make sure we preserve the scheme of the resource but convert it into a normal path segment
             // The scheme is important as we need to know if we are requesting a local or a remote resource.
             .replace('{{resource}}', resource.scheme + resource.toString().replace(/^\S+?:/, ''))
             .replace('{{uuid}}', this.viewId);
+        console.log('>>>>>>>>>>>>>>>> asWebviewUri uri: ' + uri);
         return URI.parse(uri);
     }
 
@@ -192,6 +195,7 @@ export class WebviewImpl implements theia.Webview {
     }
 
     set html(value: string) {
+        console.log('>>>>>>>>>>>>>>>> html: ' + value);
         this.checkIsDisposed();
         if (this._html !== value) {
             this._html = value;
