@@ -14,17 +14,19 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
+const vhost = require('vhost');
+import express = require('express');
 import * as fs from 'fs-extra';
 import { lookup } from 'mime-types';
 import { injectable, inject, named } from 'inversify';
 import { Application, Request, Response } from 'express';
-import URI from '@theia/core/lib/common/uri';
 import { FileUri } from '@theia/core/lib/node/file-uri';
 import { ILogger } from '@theia/core/lib/common/logger';
 import { MaybePromise } from '@theia/core/lib/common/types';
 import { ContributionProvider } from '@theia/core/lib/common/contribution-provider';
 import { BackendApplicationContribution } from '@theia/core/lib/node/backend-application';
 import { MiniBrowserService } from '../common/mini-browser-service';
+import { MiniBrowserEndpoint as MiniBrowserEndpointNS } from '../common/mini-browser-endpoint';
 
 /**
  * The return type of the `FileSystem#resolveContent` method.
@@ -86,11 +88,11 @@ export class MiniBrowserEndpoint implements BackendApplicationContribution, Mini
     protected readonly handlers: Map<string, MiniBrowserEndpointHandler> = new Map();
 
     configure(app: Application): void {
-        app.get(`${MiniBrowserEndpoint.HANDLE_PATH}*`, async (request, response) => this.response(await this.getUri(request), response));
+        this.attachRequestHandler(app);
     }
 
     async onStart(): Promise<void> {
-        for (const handler of this.getContributions()) {
+        await Promise.all(Array.from(this.getContributions(), async handler => {
             const extensions = await handler.supportedExtensions();
             for (const extension of (Array.isArray(extensions) ? extensions : [extensions]).map(e => e.toLocaleLowerCase())) {
                 const existingHandler = this.handlers.get(extension);
@@ -98,11 +100,18 @@ export class MiniBrowserEndpoint implements BackendApplicationContribution, Mini
                     this.handlers.set(extension, handler);
                 }
             }
-        }
+        }));
     }
 
     async supportedFileExtensions(): Promise<Readonly<{ extension: string, priority: number }>[]> {
-        return Array.from(this.handlers.entries()).map(([extension, handler]) => ({ extension, priority: handler.priority() }));
+        return Array.from(this.handlers.entries(), ([extension, handler]) => ({ extension, priority: handler.priority() }));
+    }
+
+    protected attachRequestHandler(app: Application): void {
+        const miniBrowserApp = express();
+        miniBrowserApp.get('*', async (request, response) => this.response(await this.getUri(request), response));
+        // We'll only answer on requests for which the host matches `THEIA_MINI_BROWSER_HOST_PATTERN`:
+        app.use(vhost(this.getVirtualHostRegExp(), miniBrowserApp));
     }
 
     protected async response(uri: string, response: Response): Promise<Response> {
@@ -135,7 +144,7 @@ export class MiniBrowserEndpoint implements BackendApplicationContribution, Mini
 
     protected getUri(request: Request): MaybePromise<string> {
         const decodedPath = request.path.substr(MiniBrowserEndpoint.HANDLE_PATH.length);
-        return new URI(FileUri.create(decodedPath).toString(true)).toString(true);
+        return FileUri.create(decodedPath).toString(true);
     }
 
     protected async readContent(uri: string): Promise<FileStatWithContent> {
@@ -186,6 +195,14 @@ export class MiniBrowserEndpoint implements BackendApplicationContribution, Mini
         };
     }
 
+    protected getVirtualHostRegExp(): RegExp {
+        const pattern = process.env[MiniBrowserEndpointNS.HOST_PATTERN_ENV] ?? MiniBrowserEndpointNS.HOST_PATTERN_DEFAULT;
+        const vhostRe = pattern
+            .replace('.', '\\.')
+            .replace('{{uuid}}', '.+')
+            .replace('{{hostname}}', '.+');
+        return new RegExp(vhostRe, 'i');
+    }
 }
 
 // See `EditorManager#canHandle`.

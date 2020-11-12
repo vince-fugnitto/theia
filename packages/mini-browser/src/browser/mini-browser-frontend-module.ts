@@ -39,6 +39,7 @@ import {
     LocationMapper,
     LocationWithoutSchemeMapper,
 } from './location-mapper-service';
+import { MiniBrowserEnvironment } from './mini-browser-environment';
 
 export default new ContainerModule(bind => {
 
@@ -62,6 +63,8 @@ export default new ContainerModule(bind => {
         }
     })).inSingletonScope();
 
+    bind(MiniBrowserEnvironment).toSelf().inSingletonScope();
+    bind(FrontendApplicationContribution).toService(MiniBrowserEnvironment);
     bind(MiniBrowserOpenHandler).toSelf().inSingletonScope();
     bind(OpenHandler).toService(MiniBrowserOpenHandler);
     bind(FrontendApplicationContribution).toService(MiniBrowserOpenHandler);

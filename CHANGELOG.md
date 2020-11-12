@@ -6,6 +6,11 @@
 
 - [file-search] Deprecate dependency on `@theia/process` and replaced its usage by node's `child_process` api.
 - [electron] Removed `attachWillPreventUnload` method from the Electron main application. The `confirmExit` logic is handled on the frontend. [#8732](https://github.com/eclipse-theia/theia/pull/8732)
+- [core] Deprecated `ElectronMessagingContribution`, token validation is now done in `ElectronTokenValidator` as a `WsRequestValidatorContribution`.
+- [mini-browser] New unique endpoint.
+  - `{{uuid}}.mini-browser.{{hostname}}` by default.
+  - Can be configured via `THEIA_MINI_BROWSER_HOST_PATTERN` environment variable.
+  - Clients must setup this new hostname in their DNS resolvers.
 
 ## v1.7.0 - 29/10/2020
 

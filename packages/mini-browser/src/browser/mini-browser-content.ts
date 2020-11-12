@@ -32,6 +32,7 @@ import debounce = require('lodash.debounce');
 import { MiniBrowserContentStyle } from './mini-browser-content-style';
 import { FileService } from '@theia/filesystem/lib/browser/file-service';
 import { FileChangesEvent, FileChangeType } from '@theia/filesystem/lib/common/files';
+import { MiniBrowserEnvironment } from './mini-browser-environment';
 
 /**
  * Initializer properties for the embedded browser widget.
@@ -179,6 +180,9 @@ export class MiniBrowserContent extends BaseWidget {
 
     @inject(FileService)
     protected readonly fileService: FileService;
+
+    @inject(MiniBrowserEnvironment)
+    protected readonly miniBrowserEnvironment: MiniBrowserEnvironment;
 
     protected readonly submitInputEmitter = new Emitter<string>();
     protected readonly navigateBackEmitter = new Emitter<void>();
