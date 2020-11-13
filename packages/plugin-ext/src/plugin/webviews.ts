@@ -164,6 +164,7 @@ export class WebviewImpl implements theia.Webview {
     ) {
         this._options = options;
         console.log('>>>>>>>>>>>>>>>> WebviewImpl init with WebviewInitData: ' + JSON.stringify(initData));
+        console.log('>>>>>>>>>>>>>>>> WebviewImpl init with WebviewOptions: ' + JSON.stringify(options));
     }
 
     dispose(): void {

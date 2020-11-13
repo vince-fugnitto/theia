@@ -363,6 +363,7 @@ export class WebviewWidget extends BaseWidget implements StatefulWidget {
             return;
         }
         this._contentOptions = contentOptions;
+        console.log('>>>>>>>>>>>>>>> plugin-ext webviews.ts setContentOptions with options: ' + JSON.stringify(contentOptions));
         this.doUpdateContent();
     }
 
