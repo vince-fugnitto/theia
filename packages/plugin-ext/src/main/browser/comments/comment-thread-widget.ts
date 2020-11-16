@@ -15,6 +15,7 @@
  ********************************************************************************/
 import { MonacoEditorZoneWidget } from '@theia/monaco/lib/browser/monaco-editor-zone-widget';
 import { Comment, CommentThread } from '../../../common/plugin-api-rpc-model';
+import { CommentGlyphWidget } from './comment-glyph-widget';
 
 export class ReviewZoneWidget extends MonacoEditorZoneWidget {
 
@@ -38,6 +39,17 @@ export class ReviewZoneWidget extends MonacoEditorZoneWidget {
         this._headElement = document.createElement('div');
         this._bodyElement = document.createElement('div');
         this._fillContainer(this.containerNode);
+    }
+
+    show(options: MonacoEditorZoneWidget.Options): void {
+        new CommentGlyphWidget(this.editor, options.afterLineNumber);
+        if (this._commentThread.collapsibleState && this._commentThread.collapsibleState !== 1) {
+            return;
+        }
+        const headHeight = Math.ceil(this.editor.getOption(monaco.editor.EditorOption.lineHeight) * 1.2);
+        this._headElement.style.height = `${headHeight}px`;
+        this._headElement.style.lineHeight = this._headElement.style.height;
+        super.show(options);
     }
 
     public get owner(): string {
@@ -76,6 +88,9 @@ export class ReviewZoneWidget extends MonacoEditorZoneWidget {
         this.createThreadLabel();
 
         // const actionsContainer = dom.append(this._headElement, dom.$('.review-actions'));
+        const reviewActions = document.createElement('div');
+        reviewActions.classList.add('.review-actions');
+        this._headElement.appendChild(reviewActions);
         // this._actionbarWidget = new ActionBar(actionsContainer, {
         //     actionViewItemProvider: (action: IAction) => {
         //         if (action instanceof MenuItemAction) {

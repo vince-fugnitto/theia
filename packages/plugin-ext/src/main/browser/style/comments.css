@@ -11,12 +11,19 @@
     transition: width 80ms linear, left 80ms linear;
 }
 
-.margin-view-overlays > div:hover > .comment-range-glyph:before {
+.monaco-editor .margin-view-overlays > div:hover > .comment-range-glyph.comment-diff-added:before,
+.monaco-editor .comment-range-glyph.comment-thread:before {
     position: absolute;
-    content: '+';
     height: 100%;
     width: 9px;
     left: -6px;
+    z-index: 10;
+    color: black;
+    text-align: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
 }
 
 .monaco-editor .comment-diff-added {
@@ -25,10 +32,26 @@
 }
 .monaco-editor .comment-diff-added:before {
     background: var(--theia-editorGutter-commentRangeForeground);
-    color: #000;
 }
-.monaco-editor .margin:hover .comment-diff-added {
-    opacity: 1;
+
+.monaco-editor .margin-view-overlays > div:hover > .comment-range-glyph.comment-diff-added:before {
+    content: "+";
+}
+
+.monaco-editor .comment-range-glyph.comment-thread {
+    z-index: 20;
+    border-left: 3px solid #000;
+}
+
+.monaco-editor .comment-thread:before {
+    background: var(--theia-editorGutter-commentRangeForeground);;
+}
+
+.monaco-editor .comment-range-glyph.comment-thread:before {
+    content: "◆";
+    font-size: 10px;
+    line-height: 100%;
+    z-index: 20;
 }
 
 .monaco-editor .review-widget .body {
@@ -46,4 +69,34 @@
     font-size: 13px;
     margin-left: 20px;
     cursor: default;
+}
+
+.monaco-editor .review-widget .head .review-actions {
+    flex: 1;
+    text-align: right;
+    padding-right: 2px;
+}
+
+.monaco-editor .review-widget .head .review-actions > .monaco-action-bar {
+    display: inline-block;
+}
+
+.monaco-editor .review-widget .head .review-actions > .monaco-action-bar,
+.monaco-editor .review-widget .head .review-actions > .monaco-action-bar > .actions-container {
+    height: 100%;
+}
+
+.monaco-editor .review-widget .action-item {
+    min-width: 18px;
+    min-height: 20px;
+    margin-left: 4px;
+}
+
+.monaco-editor .review-widget .head .review-actions > .monaco-action-bar .action-label {
+    width: 16px;
+    height: 100%;
+    margin: 0;
+    line-height: inherit;
+    background-repeat: no-repeat;
+    background-position: center center;
 }
