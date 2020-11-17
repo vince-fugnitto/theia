@@ -70,6 +70,7 @@ export class ProgressBar implements Disposable {
     }
 
     protected setVisible(visible: boolean): void {
+        console.error('!!!!!!!!!!!!!!!! PROGRESS BAR !!!!!!! SET VISIBLE ', this.options.locationId + ' /// ' + visible);
         this.progressBar.style.display = visible ? 'block' : 'none';
     }
 
