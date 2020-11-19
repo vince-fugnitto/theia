@@ -44,7 +44,7 @@
 }
 
 .monaco-editor .comment-thread:before {
-    background: var(--theia-editorGutter-commentRangeForeground);;
+    background: var(--theia-editorGutter-commentRangeForeground);
 }
 
 .monaco-editor .comment-range-glyph.comment-thread:before {
@@ -96,7 +96,41 @@
     width: 16px;
     height: 100%;
     margin: 0;
+    color: var(--theia-editorWidget-foreground);
     line-height: inherit;
     background-repeat: no-repeat;
     background-position: center center;
+}
+
+.monaco-editor .review-widget>.body {
+    border-top: 1px solid;
+    position: relative;
+}
+
+.monaco-editor .review-widget .body .review-comment {
+    padding: 8px 16px 8px 20px;
+    display: flex;
+}
+
+.monaco-editor .review-widget .body .review-comment .avatar-container {
+    margin-top: 4px !important;
+}
+
+.monaco-editor .review-widget .body .review-comment .avatar-container img.avatar {
+    height: 28px;
+    width: 28px;
+    display: inline-block;
+    overflow: hidden;
+    line-height: 1;
+    vertical-align: middle;
+    border-radius: 3px;
+    border-style: none;
+}
+
+.monaco-editor .review-widget .body .review-comment .review-comment-contents {
+    padding-left: 20px;
+    user-select: text;
+    -webkit-user-select: text;
+    width: 100%;
+    overflow: hidden;
 }

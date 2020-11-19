@@ -16,25 +16,18 @@
 
 export class CommentGlyphWidget {
 
-    // private _lineNumber!: number;
     private editor: monaco.editor.ICodeEditor;
     private commentsDecorations: string[] = [];
-    private _commentsOptions: monaco.editor.IModelDecorationOptions;
-    constructor(editor: monaco.editor.ICodeEditor, lineNumber: number) {
-        this._commentsOptions = this.createDecorationOptions();
-        this.editor = editor;
-        this.setLineNumber(lineNumber);
-    }
-
-    private createDecorationOptions(): monaco.editor.IModelDecorationOptions {
-        return  {
+    readonly _commentsOptions: monaco.editor.IModelDecorationOptions;
+    constructor(editor: monaco.editor.ICodeEditor) {
+        this._commentsOptions = {
             isWholeLine: true,
             linesDecorationsClassName: 'comment-range-glyph comment-thread'
         };
+        this.editor = editor;
     }
 
     setLineNumber(lineNumber: number): void {
-        // this._lineNumber = lineNumber;
         const commentsDecorations = [{
             range: {
                 startLineNumber: lineNumber, startColumn: 1,
@@ -44,5 +37,9 @@ export class CommentGlyphWidget {
         }];
 
         this.commentsDecorations = this.editor.deltaDecorations(this.commentsDecorations, commentsDecorations);
+    }
+
+    hide(): void {
+        this.commentsDecorations = this.editor.deltaDecorations(this.commentsDecorations, []);
     }
 }

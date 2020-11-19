@@ -51,10 +51,6 @@ export class MonacoEditorZoneWidget implements Disposable {
         this.containerNode.classList.add('zone-widget-container');
         this.zoneNode.appendChild(this.containerNode);
         this.updateWidth();
-        if (showArrow) {
-            this._arrow = new Arrow(this.editor);
-            this.toDispose.push(this._arrow);
-        }
         this.toDispose.push(this.editor.onDidLayoutChange(info => this.updateWidth(info)));
     }
 
@@ -74,19 +70,18 @@ export class MonacoEditorZoneWidget implements Disposable {
     show(options: MonacoEditorZoneWidget.Options): void {
         let { afterLineNumber, afterColumn, heightInLines } = this._options = { showFrame: true, ...options };
         const lineHeight = this.editor.getOption(monaco.editor.EditorOption.lineHeight);
-        const maxHeightInLines = (this.editor.getLayoutInfo().height / lineHeight) * .8;
-        if (heightInLines >= maxHeightInLines) {
-            heightInLines = maxHeightInLines;
-        }
+        // adjust heightInLines to viewport
+        const maxHeightInLines = Math.max(12, (this.editor.getLayoutInfo().height / lineHeight) * 0.8);
+        heightInLines = Math.min(heightInLines, maxHeightInLines);
 
         let arrowHeight = 0;
         // let frameThickness = 0;
 
         // Render the arrow one 1/3 of an editor line height
         if (this._arrow) {
-            arrowHeight = Math.round(lineHeight / 3);
-            this._arrow.height = arrowHeight;
-            this._arrow.show({ lineNumber: options.afterLineNumber, column: 0 });
+            // arrowHeight = Math.round(lineHeight / 3);
+            // this._arrow.height = arrowHeight;
+            // this._arrow.show({ lineNumber: options.afterLineNumber, column: 0 });
         }
         this.toHide.dispose();
         this.editor.changeViewZones(accessor => {
@@ -109,6 +104,14 @@ export class MonacoEditorZoneWidget implements Disposable {
                 this.editor.changeViewZones(a => a.removeZone(id));
                 this.viewZone = undefined;
             }));
+            if (this.showArrow) {
+                this._arrow = new Arrow(this.editor);
+                arrowHeight = Math.round(lineHeight / 3);
+                this._arrow.height = arrowHeight;
+                this._arrow.show({ lineNumber: options.afterLineNumber, column: 0 });
+
+                this.toHide.push(this._arrow);
+            }
             const widget: monaco.editor.IOverlayWidget = {
                 getId: () => 'editor-zone-widget-' + id,
                 getDomNode: () => this.zoneNode,

@@ -63,71 +63,71 @@ export class CommentsContribution {
                         this.rangeDecorator.update(editor.diffEditor.getModifiedEditor(), <ICommentInfo[]>modifiedComments.filter(c => !!c));
                     }
                 }
-                const toDispose = editor.onMouseDown(event => this.onEditorMouseDown(event));
+                // const toDispose = editor.onMouseDown(event => this.onEditorMouseDown(event));
+                const toDispose = this.commentService.onDidUpdateCommentThreads(async e => {
+                    const editorModel = this.editor && this.editor.getModel();
+                    const editorURI = this.editor && editorModel && editorModel.uri;
+                    if (!editorURI) {
+                        return;
+                    }
+
+                    if (this._computePromise) {
+                        await this._computePromise;
+                    }
+
+                    const commentInfo = this._commentInfos.filter(info => info.owner === e.owner);
+                    if (!commentInfo || !commentInfo.length) {
+                        return;
+                    }
+
+                    const added = e.added.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
+                    const removed = e.removed.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
+                    const changed = e.changed.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
+
+                    removed.forEach(thread => {
+                        // const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
+                        //     && zoneWidget.commentThread.threadId === thread.threadId && zoneWidget.commentThread.threadId !== '');
+                        // if (matchedZones.length) {
+                        //     const matchedZone = matchedZones[0];
+                        //     const index = this._commentWidgets.indexOf(matchedZone);
+                        //     this._commentWidgets.splice(index, 1);
+                        //     matchedZone.dispose();
+                        // }
+                    });
+
+                    changed.forEach(thread => {
+                        const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
+                            && zoneWidget.commentThread.threadId === thread.threadId);
+                        if (matchedZones.length) {
+                            const matchedZone = matchedZones[0];
+                            matchedZone.update();
+                        }
+                    });
+                    added.forEach(thread => {
+                        // const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
+                        //     && zoneWidget.commentThread.threadId === thread.threadId);
+                        // if (matchedZones.length) {
+                        //     return;
+                        // }
+                        //
+                        // const matchedNewCommentThreadZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
+                        //     && (zoneWidget.commentThread as any).commentThreadHandle === -1 && Range.equalsRange(zoneWidget.commentThread.range, thread.range));
+                        //
+                        // if (matchedNewCommentThreadZones.length) {
+                        //     matchedNewCommentThreadZones[0].update(thread);
+                        //     return;
+                        // }
+
+                        const pendingCommentText = this._pendingCommentCache[e.owner] && this._pendingCommentCache[e.owner][thread.threadId!];
+                        this.displayCommentThread(e.owner, thread, pendingCommentText);
+                        this._commentInfos.filter(info => info.owner === e.owner)[0].threads.push(thread);
+                    });
+                });
                 editor.onDispose(() => {
                     toDispose.dispose();
                 });
                 this.beginCompute();
             }
-            this.commentService.onDidUpdateCommentThreads(async e => {
-                const editorModel = this.editor && this.editor.getModel();
-                const editorURI = this.editor && editorModel && editorModel.uri;
-                if (!editorURI) {
-                    return;
-                }
-
-                if (this._computePromise) {
-                    await this._computePromise;
-                }
-
-                const commentInfo = this._commentInfos.filter(info => info.owner === e.owner);
-                if (!commentInfo || !commentInfo.length) {
-                    return;
-                }
-
-                const added = e.added.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
-                const removed = e.removed.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
-                const changed = e.changed.filter(thread => thread.resource && thread.resource.toString() === editorURI.toString());
-
-                removed.forEach(thread => {
-                    // const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
-                    //     && zoneWidget.commentThread.threadId === thread.threadId && zoneWidget.commentThread.threadId !== '');
-                    // if (matchedZones.length) {
-                    //     const matchedZone = matchedZones[0];
-                    //     const index = this._commentWidgets.indexOf(matchedZone);
-                    //     this._commentWidgets.splice(index, 1);
-                    //     matchedZone.dispose();
-                    // }
-                });
-
-                changed.forEach(thread => {
-                    const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
-                        && zoneWidget.commentThread.threadId === thread.threadId);
-                    if (matchedZones.length) {
-                        const matchedZone = matchedZones[0];
-                        matchedZone.update(thread);
-                    }
-                });
-                added.forEach(thread => {
-                    // const matchedZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
-                    //     && zoneWidget.commentThread.threadId === thread.threadId);
-                    // if (matchedZones.length) {
-                    //     return;
-                    // }
-                    //
-                    // const matchedNewCommentThreadZones = this._commentWidgets.filter(zoneWidget => zoneWidget.owner === e.owner
-                    //     && (zoneWidget.commentThread as any).commentThreadHandle === -1 && Range.equalsRange(zoneWidget.commentThread.range, thread.range));
-                    //
-                    // if (matchedNewCommentThreadZones.length) {
-                    //     matchedNewCommentThreadZones[0].update(thread);
-                    //     return;
-                    // }
-
-                    const pendingCommentText = this._pendingCommentCache[e.owner] && this._pendingCommentCache[e.owner][thread.threadId!];
-                    this.displayCommentThread(e.owner, thread, pendingCommentText);
-                    this._commentInfos.filter(info => info.owner === e.owner)[0].threads.push(thread);
-                });
-            });
         });
     }
 
@@ -224,22 +224,25 @@ export class CommentsContribution {
     }
 
     private displayCommentThread(owner: string, thread: CommentThread, pendingComment: string | undefined): void {
-        // const zoneWidget = this.instantiationService.createInstance(ReviewZoneWidget, this.editor, owner, thread, pendingComment);
-        if (this.editor) {
-            const zoneWidget = new ReviewZoneWidget(this.editor, owner, thread);
-            // zoneWidget.display(thread.range.startLineNumber);
-            zoneWidget.show({ afterLineNumber: thread.range.startLineNumber, heightInLines: 5 });
+        const editor = this.editor;
+        if (editor) {
+            const zoneWidget = new ReviewZoneWidget(editor, owner, thread);
+            zoneWidget.display({ afterLineNumber: thread.range.startLineNumber, heightInLines: 5 });
+            const currentEditor = this.getCurrentEditor();
+            if (currentEditor) {
+                currentEditor.onDispose(() => zoneWidget.dispose());
+            }
             this._commentWidgets.push(zoneWidget);
         }
     }
 
-    private onEditorMouseDown(e: EditorMouseEvent): void {
-
-        if (e.target.element && e.target.element.className.indexOf('comment-diff-added') >= 0) {
-            const lineNumber = e.target.position!.line;
-            this.addOrToggleCommentAtLine(lineNumber, e);
-        }
-    }
+    // private onEditorMouseDown(e: EditorMouseEvent): void {
+    //
+    //     if (e.target.element && e.target.element.className.indexOf('comment-diff-added') >= 0) {
+    //         const lineNumber = e.target.position!.line;
+    //         this.addOrToggleCommentAtLine(lineNumber, e);
+    //     }
+    // }
 
     public async addOrToggleCommentAtLine(lineNumber: number, e: EditorMouseEvent | undefined): Promise<void> {
         // If an add is already in progress, queue the next add and process it after the current one finishes to
