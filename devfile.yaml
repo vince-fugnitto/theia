@@ -37,6 +37,7 @@ commands:
         command: >
           killall node;
           yarn
+          yarn build
         workdir: ${workspaceRoot}/theia
   - name: >
       theia: Launch Browser Backend

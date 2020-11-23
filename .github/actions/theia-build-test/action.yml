@@ -1,0 +1,43 @@
+name: Install Build Lint Test
+inputs:
+  shell:
+    description: Shell to run command into.
+    required: true
+    default: bash
+runs:
+  using: "composite"
+  steps:
+  - name: Use Java JDK 9
+    uses: actions/setup-java@v1
+    with:
+      java-package: jdk
+      java-version: 9
+  - name: Use Node.js 12
+    uses: actions/setup-node@v1
+    with:
+      node-version: 12
+  - name: Cache Yarn Install
+    id: cache-yarn-install
+    uses: actions/cache@v2
+    with:
+      path: |
+        /tmp/vscode-ripgrep-cache-*
+        **/node_modules
+        plugins
+        !**/node_modules/electron
+        !**/@theia/electron/download
+        !**/@theia/electron/post-install.log
+      key: ${{ runner.os }}-${{ hashFiles('package.json', 'yarn.lock') }}
+  - name: Yarn Install
+    if: steps.cache-yarn-install.outputs.cache-hit != 'true'
+    run: yarn
+    shell: ${{ inputs.shell }}
+  - name: Build
+    run: yarn build
+    shell: ${{ inputs.shell }}
+  - name: Linting
+    run: yarn lint
+    shell: ${{ inputs.shell }}
+  - name: Testing
+    run: yarn test
+    shell: ${{ inputs.shell }}
