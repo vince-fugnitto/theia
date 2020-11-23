@@ -13,9 +13,11 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
+import { Disposable } from '@theia/core/lib/common';
 
-export class CommentGlyphWidget {
+export class CommentGlyphWidget implements Disposable {
 
+    private _lineNumber!: number;
     private editor: monaco.editor.ICodeEditor;
     private commentsDecorations: string[] = [];
     readonly _commentsOptions: monaco.editor.IModelDecorationOptions;
@@ -27,7 +29,17 @@ export class CommentGlyphWidget {
         this.editor = editor;
     }
 
+    getPosition(): number {
+        const model = this.editor.getModel();
+        const range = model && this.commentsDecorations && this.commentsDecorations.length
+            ? model.getDecorationRange(this.commentsDecorations[0])
+            : null;
+
+        return range ? range.startLineNumber : this._lineNumber;
+    }
+
     setLineNumber(lineNumber: number): void {
+        this._lineNumber = lineNumber;
         const commentsDecorations = [{
             range: {
                 startLineNumber: lineNumber, startColumn: 1,
@@ -39,7 +51,9 @@ export class CommentGlyphWidget {
         this.commentsDecorations = this.editor.deltaDecorations(this.commentsDecorations, commentsDecorations);
     }
 
-    hide(): void {
-        this.commentsDecorations = this.editor.deltaDecorations(this.commentsDecorations, []);
+    dispose(): void {
+        if (this.commentsDecorations) {
+            this.editor.deltaDecorations(this.commentsDecorations, []);
+        }
     }
 }

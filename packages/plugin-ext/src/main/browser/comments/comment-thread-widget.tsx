@@ -20,12 +20,15 @@ import { BaseWidget } from '@theia/core/lib/browser';
 import * as ReactDOM from 'react-dom';
 import * as React from 'react';
 import { MouseTargetType } from '@theia/editor/lib/browser';
+import { CommentsService } from './comments-service';
 
 export class ReviewZoneWidget extends BaseWidget {
 
     protected _headingLabel: HTMLElement;
     protected zoneWidget: MonacoEditorZoneWidget;
     protected commentGlyphWidget: CommentGlyphWidget;
+
+    private _isExpanded?: boolean;
 
     public getGlyphPosition(): number {
         // if (this._commentGlyph) {
@@ -37,12 +40,26 @@ export class ReviewZoneWidget extends BaseWidget {
     constructor(
         editor: monaco.editor.IStandaloneCodeEditor,
         private _owner: string,
-        private _commentThread: CommentThread
+        private _commentThread: CommentThread,
+        private commentService: CommentsService
     ) {
         super();
         this.toDispose.push(this.zoneWidget = new MonacoEditorZoneWidget(editor));
-        this.zoneWidget.editor.onMouseDown(e => this.onEditorMouseDown(e));
-        this.commentGlyphWidget = new CommentGlyphWidget(editor);
+        this.toDispose.push(this.commentGlyphWidget = new CommentGlyphWidget(editor));
+        this.toDispose.push(this._commentThread.onDidChangeCollasibleState(state => {
+            if (state === CommentThreadCollapsibleState.Expanded && !this._isExpanded) {
+                const lineNumber = this._commentThread.range.startLineNumber;
+
+                this.display({ afterLineNumber: lineNumber, afterColumn: 1, heightInLines: 2});
+                return;
+            }
+
+            if (state === CommentThreadCollapsibleState.Collapsed && this._isExpanded) {
+                this.hide();
+                return;
+            }
+        }));
+        this.toDispose.push(this.zoneWidget.editor.onMouseDown(e => this.onEditorMouseDown(e)));
         // this._fillContainer(this.zone.containerNode);
         // this.createThreadLabel();
     }
@@ -67,7 +84,7 @@ export class ReviewZoneWidget extends BaseWidget {
                                    role={'button'}
                                    tabIndex={0}
                                    title={'Collapse'}
-                                   onClick={() => this.hide()}
+                                   onClick={() => this.collapse()}
                                 />
                             </li>
                         </ul>
@@ -78,17 +95,67 @@ export class ReviewZoneWidget extends BaseWidget {
                 <div className={'comments-container'} role={'presentation'} tabIndex={0}>
                     {this.commentThread.comments?.map(comment => <ThreadElements comment={comment}/> )}
                 </div>
+                <div className={'comment-form'}>
+
+                </div>
             </div>
         </div>, this.zoneWidget.containerNode);
     }
 
+    public collapse(): Promise<void> {
+        this._commentThread.collapsibleState = CommentThreadCollapsibleState.Collapsed;
+        if (this._commentThread.comments && this._commentThread.comments.length === 0) {
+            this.deleteCommentThread();
+            return Promise.resolve();
+        }
+
+        this.hide();
+        return Promise.resolve();
+    }
+
+    private deleteCommentThread(): void {
+        this.dispose();
+        this.commentService.disposeCommentThread(this.owner, this._commentThread.threadId);
+    }
+
+    dispose(): void {
+        super.dispose();
+        // if (this._resizeObserver) {
+        //     this._resizeObserver.disconnect();
+        //     this._resizeObserver = null;
+        // }
+
+        if (this.commentGlyphWidget) {
+            this.commentGlyphWidget.dispose();
+        }
+
+        // this._globalToDispose.dispose();
+        // this._commentThreadDisposables.forEach(global => global.dispose());
+        // this._submitActionsDisposables.forEach(local => local.dispose());
+        // this._onDidClose.fire(undefined);
+    }
+
+    toggleExpand(lineNumber: number): void {
+        if (this._isExpanded) {
+            this._commentThread.collapsibleState = CommentThreadCollapsibleState.Collapsed;
+            this.hide();
+            if (!this._commentThread.comments || !this._commentThread.comments.length) {
+                this.deleteCommentThread();
+            }
+        } else {
+            this._commentThread.collapsibleState = CommentThreadCollapsibleState.Expanded;
+            this.display({ afterLineNumber: lineNumber, afterColumn: 1, heightInLines: 2 });
+        }
+    }
+
     hide(): void {
-        this.commentThread.collapsibleState = CommentThreadCollapsibleState.Collapsed;
         this.zoneWidget.hide();
+        this._isExpanded = false;
         super.hide();
     }
 
     display(options: MonacoEditorZoneWidget.Options): void {
+        this._isExpanded = true;
         if (this._commentThread.collapsibleState && this._commentThread.collapsibleState !== CommentThreadCollapsibleState.Expanded) {
             return;
         }
@@ -137,13 +204,14 @@ export class ReviewZoneWidget extends BaseWidget {
             return;
         }
 
-        // if (this.commentGlyphWidget && this.commentGlyphWidget.getPosition().position!.lineNumber !== lineNumber) {
-        //     return;
-        // }
-        //
-        // if (e.target.element.className.indexOf('comment-thread') >= 0) {
-        //     this.toggleExpand(lineNumber);
-        // }
+        if (this.commentGlyphWidget && this.commentGlyphWidget.getPosition() !== lineNumber) {
+            return;
+        }
+
+        if (e.target.element.className.indexOf('comment-thread') >= 0) {
+            this.toggleExpand(lineNumber);
+            return;
+        }
 
         if (this.commentThread.collapsibleState === CommentThreadCollapsibleState.Collapsed) {
             this.display({ afterLineNumber: mouseDownInfo.lineNumber, heightInLines: 2 });
